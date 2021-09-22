@@ -7,18 +7,22 @@
 // @match        https://login.seamless.ai/*
 // ==/UserScript==
 const later = (delay, value) => new Promise(resolve => setTimeout(resolve, delay, value));
-var injected = false;
-
+var running = false;
 async function inject(){
     console.log('attemping to inject button');
-    if(injected){
-        return;
+    while(true){
+        if(getInjectedButton() == undefined && window.location.href.includes('search/contacts?')){
+            injectButton();
+            if(running){
+                autoBtnDisable(getInjectedButton());
+            }
+        }
+        else{
+            await later(100);
+        }
+
     }
-    while(!window.location.href.includes('search/contacts?')){
-        await later(100);
-    }
-    injected = true;
-    injectButton();
+
 }
 
 window.addEventListener('load', async function() {
@@ -35,6 +39,10 @@ function getNextBatchButton(){
 }
 function getFindAllButton(){
     var xpath = "//button[text()='Find All']";
+    return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+}
+function getInjectedButton(){
+    var xpath = "//button[text()='Auto Find']";
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
 function getNextButton(){
@@ -139,7 +147,7 @@ async function runBatch(){
 
 
     await waitForTableLoadingFinish();
-    var rdy = await waitForFindAllReady(1);
+    var rdy = await waitForFindAllReady(5);
     if(rdy){
         findAll();
     }
@@ -147,7 +155,7 @@ async function runBatch(){
         await later(1000);
         nextPage();
         await waitForTableLoadingFinish();
-        var ready = await waitForFindAllReady(1);
+        var ready = await waitForFindAllReady(5);
         if(ready) findAll();
     }
     console.log("Finished batch!");
@@ -155,6 +163,7 @@ async function runBatch(){
 }
 
 async function run(){
+    running = true;
     await runBatch();
     await later(1000);
     while(getNextBatchButton() != undefined){
@@ -163,5 +172,6 @@ async function run(){
         await runBatch();
         await later(1000);
     }
+    running = false;
     console.log('Macro finished');
 }
