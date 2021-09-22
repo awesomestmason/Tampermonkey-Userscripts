@@ -9,19 +9,21 @@
 const later = (delay, value) => new Promise(resolve => setTimeout(resolve, delay, value));
 var injected = false;
 
-function inject(){
-    if(window.location.href.includes('search/contacts?') && !injected){
-        injected = true;
-        injectButton();
+async function inject(){
+    console.log('attemping to inject button');
+    if(injected){
+        return;
     }
+    while(!window.location.href.includes('search/contacts?')){
+        await later(100);
+    }
+    injected = true;
+    injectButton();
 }
 
-window.addEventListener('locationchange', function() {
-    inject();
-});
-window.addEventListener('load', function() {
+window.addEventListener('load', async function() {
 'use strict';
-    inject();
+    await inject();
 });
 function isLoadingTable(){
     var xpath = "//div[contains(@class, 'rs-placeholder')]";
