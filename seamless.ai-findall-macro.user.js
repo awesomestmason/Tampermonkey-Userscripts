@@ -18,7 +18,7 @@ function inject(){
 
 window.addEventListener('locationchange', function() {
     inject();
-}
+});
 window.addEventListener('load', function() {
 'use strict';
     inject();
