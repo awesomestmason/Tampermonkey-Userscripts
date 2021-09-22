@@ -4,7 +4,7 @@
 // @version      0.1
 // @description  Automatically finds all, then goes to next page.
 // @author       Mason
-// @match        https://login.seamless.ai/search/contacts*
+// @match        https://login.seamless.ai/*
 // ==/UserScript==
 const later = (delay, value) => new Promise(resolve => setTimeout(resolve, delay, value));
 var injected = false;
