@@ -23,7 +23,6 @@ window.addEventListener('load', function() {
 'use strict';
     inject();
 });
-
 function isLoadingTable(){
     var xpath = "//div[contains(@class, 'rs-placeholder')]";
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue != undefined;
@@ -32,14 +31,10 @@ function getNextBatchButton(){
     var xpath = "//button[text()='Search Next 10 Companies']";
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
-console.log('Next Batch Button:')
-console.log(getNextBatchButton());
 function getFindAllButton(){
     var xpath = "//button[text()='Find All']";
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
-console.log('Find All Button:')
-console.log(getFindAllButton());
 function getNextButton(){
     var xpath= "button[last()]";
     var parentdiv = getMenuDiv();
@@ -48,16 +43,11 @@ function getNextButton(){
     }
     return document.evaluate(xpath, parentdiv, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
-console.log('Next Button:')
-console.log(getNextButton());
 function getMenuDiv(){
     var findAll = getFindAllButton();
     if(findAll == undefined) return undefined;
     return findAll.parentElement;
 }
-console.log('Parent Div:')
-console.log(getMenuDiv());
-
 function autoBtnEnable(btn){
     btn.classList.remove("rs-btn-disabled");
     btn.disabled = false;
@@ -85,7 +75,6 @@ async function injectButton(){
     return newbtn;
 
 }
-
 async function runBatch(){
     console.log('Starting batch!')
     var findallbtn = getFindAllButton();
