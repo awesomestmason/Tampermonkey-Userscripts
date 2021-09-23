@@ -28,6 +28,7 @@ function inject(){
     }
     return false;
 }
+var injecting = false;
 async function injectonceasync(){
 
     while(true){
@@ -60,7 +61,7 @@ async function injectasync(){
 
 window.addEventListener('load', async function() {
 'use strict';
-    await inject();
+    await injectonceasync();
 });
 
 async function waitFor(cond, timeout = 30000){
@@ -109,8 +110,7 @@ function getFindAllButton(){
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
 function getInjectedButton(){
-    var xpath = "//button[text()='Auto Find']";
-    return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    return document.evaluate("//button[contains(@class, 'macro-autofind-btn')]", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
 function hasNextPage(){
     var nextbtn = getNextButton();
@@ -133,12 +133,23 @@ function getMenuDiv(){
     return findAll.parentElement;
 }
 function autoBtnEnable(btn){
+    btn.childNodes[1].data = "Auto Find";
     btn.classList.remove("rs-btn-disabled");
     btn.disabled = false;
+    btn.onclick = async function(){
+        autoBtnDisable(btn);
+        await main();
+    };
 }
 function autoBtnDisable(btn){
-    btn.classList.add("rs-btn-disabled");
-    btn.disabled = true;
+    btn.childNodes[1].data = "Stop";
+    btn.onclick = async function() {
+        running = false;
+        btn.childNodes[1].data = "Stopping...";
+        btn.disabled = true;
+        btn.classList.add("rs-btn-disabled");
+    };
+    //btn.disabled = true;
 }
 async function injectButton(){
     var div = getMenuDiv();
@@ -146,14 +157,8 @@ async function injectButton(){
         await later(500);
     }
     var newbtn = getFindAllButton().cloneNode(true);
+    newbtn.classList.add('macro-autofind-btn');
     newbtn.style.backgroundColor = "rgb(30, 204, 10)";
-    newbtn.innerHTML = newbtn.innerHTML.replaceAll('Find All', "Auto Find");
-    newbtn.onclick = async function(){
-        autoBtnDisable(newbtn);
-        await main();
-        autoBtnEnable(newbtn);
-
-    }
     div.insertBefore(newbtn, div.children[1]);
     autoBtnEnable(newbtn);
     return newbtn;
@@ -161,7 +166,8 @@ async function injectButton(){
 }
 
 async function main(){
-    while(true){
+    running = true;
+    while(running){
         console.log('==Checking for table==');
         if(hasTable()){
             console.log('Found table waiting for it to finish loading...');
@@ -173,6 +179,8 @@ async function main(){
             if(findall_ready){
                 console.log('Clicked findall button');
                 getFindAllButton().click();
+                await later(1000);
+
             }
             else{
                 console.log('Findall button not found / timed out');
@@ -194,5 +202,8 @@ async function main(){
         }
         await later(500);
     }
+    console.log('Macro stopped!');
+
+    autoBtnEnable(getInjectedButton());
 
 }
