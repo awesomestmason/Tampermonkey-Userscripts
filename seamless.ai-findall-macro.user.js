@@ -8,14 +8,47 @@
 // ==/UserScript==
 const later = (delay, value) => new Promise(resolve => setTimeout(resolve, delay, value));
 var running = false;
-async function inject(){
+
+(function (old) {
+    window.history.pushState = async function () {
+        old.apply(window.history, arguments);
+        await injectonceasync();
+    }
+})(window.history.pushState);
+
+function inject(){
+    console.log('attemping to inject button');
+    if(getInjectedButton() == undefined && getMenuDiv() != undefined){
+        console.log('button injected');
+        injectButton();
+        if(running){
+            autoBtnDisable(getInjectedButton());
+        }
+        return true;
+    }
+    return false;
+}
+async function injectonceasync(){
+
+    while(true){
+        if(!window.location.href.includes('search/contacts?')){
+            return;
+        }
+        await later(200);
+        if(inject()){
+            return;
+        }
+        else{
+            await later(100);
+        }
+
+    }
+
+}
+async function injectasync(){
     console.log('attemping to inject button');
     while(true){
-        if(getInjectedButton() == undefined && window.location.href.includes('search/contacts?')){
-            injectButton();
-            if(running){
-                autoBtnDisable(getInjectedButton());
-            }
+        if(inject()){
         }
         else{
             await later(100);
@@ -29,9 +62,43 @@ window.addEventListener('load', async function() {
 'use strict';
     await inject();
 });
+
+async function waitFor(cond, timeout = 30000){
+    var timer = 0;
+    var poll = 100;
+    while(true)
+    {
+        if(timer >= timeout){
+            return false;
+        }
+        if(!cond()){
+            timer += poll;
+            await later(poll);
+        }
+        else{
+            return true;
+        }
+    }
+}
+
+function isNoResults(){
+    var xpath = "//div[text()='No results']";
+    return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue != undefined;
+}
+
+function hasTable(){
+    var xpath = "//table";
+    return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue != undefined;
+}
 function isLoadingTable(){
+    if(!hasTable()){
+        return false;
+    }
     var xpath = "//div[contains(@class, 'rs-placeholder')]";
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue != undefined;
+}
+function hasNextBatch(){
+    return getNextBatchButton() != undefined
 }
 function getNextBatchButton(){
     var xpath = "//button[text()='Search Next 10 Companies']";
@@ -44,6 +111,13 @@ function getFindAllButton(){
 function getInjectedButton(){
     var xpath = "//button[text()='Auto Find']";
     return document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+}
+function hasNextPage(){
+    var nextbtn = getNextButton();
+    if(nextbtn == undefined){
+        return false;
+    }
+    return nextbtn.disabled == false;
 }
 function getNextButton(){
     var xpath= "button[last()]";
@@ -76,7 +150,7 @@ async function injectButton(){
     newbtn.innerHTML = newbtn.innerHTML.replaceAll('Find All', "Auto Find");
     newbtn.onclick = async function(){
         autoBtnDisable(newbtn);
-        await run();
+        await main();
         autoBtnEnable(newbtn);
 
     }
@@ -85,93 +159,40 @@ async function injectButton(){
     return newbtn;
 
 }
-async function runBatch(){
-    console.log('Starting batch!')
-    var findallbtn = getFindAllButton();
-    var nextbtn = getNextButton();
-    function hasNextPage(){
-        nextbtn = getNextButton();
-        if(nextbtn == undefined){
-            return false;
-        }
-        return nextbtn.disabled == false;
-    }
-    async function waitForTableLoadingFinish(){
-        console.log('waiting for table to load');
-        var timer = 0;
-        while(true)
-        {
-            if(timer >= 600){
-                console.log('waiting for table to load timed out!');
-                return false;
-            }
-            if(isLoadingTable()){
-                timer += 1;
-                await later(100);
+
+async function main(){
+    while(true){
+        console.log('==Checking for table==');
+        if(hasTable()){
+            console.log('Found table waiting for it to finish loading...');
+            //Wait for table to load
+            await waitFor(() => !isLoadingTable(), 60000);
+            console.log('Now waiting for the findall button to be ready...');
+            //Wait for find all button to be ready
+            var findall_ready = await waitFor(() => getFindAllButton() != undefined && !getFindAllButton().disabled, 1000);
+            if(findall_ready){
+                console.log('Clicked findall button');
+                getFindAllButton().click();
             }
             else{
-                console.log('table loaded!');
-                return true;
+                console.log('Findall button not found / timed out');
             }
         }
-    }
-    async function waitForFindAllReady(timeout = 30) {
-        console.log('waiting for findall button to be ready!');
-        var timer = 0;
-        while(true)
-        {
-            if(timer >= timeout){
-                console.log('waiting for findall button timed out!');
-                return false;
-            }
-            if(findallbtn == undefined || findallbtn.disabled){
-                timer += 1;
-                await later(1000);
-            }
-            else{
-                console.log('findall button ready!');
-                return true;
-            }
-            findallbtn = getFindAllButton();
+        await later(500);
+        console.log('==Checking for next page==');
+        if(hasNextPage()){
+            console.log('Clicked next page');
+            getNextButton().click();
+            continue;
         }
+        await later(500);
+        console.log('==Checking for next batch==');
+        if(hasNextBatch()){
+            console.log('Clicked next batch');
+            getNextBatchButton().click();
+            continue;
+        }
+        await later(500);
+    }
 
-    }
-    function nextPage(){
-        console.log('clicking next page...')
-        nextbtn.click();
-    }
-    function findAll(){
-        console.log('finding all!');
-        findallbtn.click();
-    }
-
-
-    await waitForTableLoadingFinish();
-    var rdy = await waitForFindAllReady(5);
-    if(rdy){
-        findAll();
-    }
-    while(hasNextPage()){
-        await later(1000);
-        nextPage();
-        await waitForTableLoadingFinish();
-        var ready = await waitForFindAllReady(5);
-        if(ready) findAll();
-    }
-    console.log("Finished batch!");
-    //At end of page
-}
-
-async function run(){
-    running = true;
-    await runBatch();
-    await later(1000);
-    while(getNextBatchButton() != undefined){
-        console.log("Clicking next batch button");
-        getNextBatchButton().click();
-        await runBatch();
-        await later(1000);
-    }
-    running = false;
-    console.log('Macro finished');
 }
