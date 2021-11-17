@@ -179,7 +179,7 @@ async function main(){
             if(findall_ready){
                 console.log('Clicked findall button');
                 getFindAllButton().click();
-                await later(1000);
+                await later(2500);
 
             }
             else{
