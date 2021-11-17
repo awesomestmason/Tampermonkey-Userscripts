@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Seamless.AI Find All Macro
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  Automatically finds all, then goes to next page.
 // @author       Mason
 // @match        https://login.seamless.ai/*
